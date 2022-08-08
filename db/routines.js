@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-catch */
-const { createActivity } = require('./activities');
 const client = require('./client');
+const { createActivity, attachActivitiesToRoutines } = require('./activities');
 const { addActivityToRoutine } = require('./routine_activities');
 
 async function getRoutineById(id){
@@ -25,7 +25,7 @@ async function getRoutineById(id){
       WHERE activities_routines."routineId"=$1;
     `, [id])
 
-    const { rows: [user] } = await client.query(`
+    const { rows: [ user ] } = await client.query(`
       SELECT id, username, name, location
       FROM users
       WHERE id=$1;
@@ -34,7 +34,7 @@ async function getRoutineById(id){
     // routine.activities = activities;
     // routine.user = user;
 
-    delete routine.userId
+    delete routine.userId;
 
     return routine;
   } catch (error){
@@ -56,14 +56,18 @@ async function getRoutinesWithoutActivities(){
 }
 
 async function getAllRoutines() {
+  console.log(attachActivitiesToRoutines)
   try{
-    const { rows: [ routines ] } = await client.query(`
+    const { rows: routines } = await client.query(`
     SELECT *
-    FROM routines;
+    FROM routines
+    JOIN users ON routines."creatorId" = users.id;
     `);
+    console.log(routines, "these are the rows=(")
+    const attachedRoutines =  attachActivitiesToRoutines(routines);
     console.log('########')
-    console.log(routines)
-    return routines;
+    console.log(attachedRoutines, "###########")
+    return attachedRoutines
   }catch (error) {
     throw error;
   }
@@ -74,8 +78,8 @@ async function getAllRoutinesByUser({username}) {
     const { rows: routineIds } = await client.query(`
     SELECT id
     FROM routines
-    WHERE username=${ username };
-    `)
+    WHERE username=$1;
+    `, [username])
 
     const routines = await Promise.all(routineIds.map(
       routine => getRoutineById ( routine.id )
@@ -92,8 +96,8 @@ async function getPublicRoutinesByUser({username}) {
     const { rows: routineId } = await client.query(`
     SELECT id
     FROM routines
-    WHERE "creatorId"=${username};
-    `)
+    WHERE "creatorId"=$1;
+    `, [username])
 
     const routines = await Promise.all(routineId.map(
       routine => getRoutineById( routine.id )

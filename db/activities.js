@@ -1,7 +1,6 @@
 /* eslint-disable no-useless-catch */
 const client = require("./client");
 const { createRoutine } = require("./routines");
-const { addActivityToRoutine } = require("./routine_activities")
 
 // database functions
 async function getAllActivities() {
@@ -69,15 +68,28 @@ async function getActivityByName(name) {
 }
 
 
-async function attachActivitiesToRoutines(routines, routineId) {
+async function attachActivitiesToRoutines(routines) {
+  const routinesToReturn = [...routines]
+
+  const routineActivities = routines.map((_, i)=>`${i+1}`).join(", ")
+  const routineIds = routines.map(routine=> routine.id)
+  if(!routineIds?.length){
+    return []
+  }
   try{
-    const activityRoutinePromise = routines.map(
-      routine => addActivityToRoutine(routine.id)
-    )
+    const { rows: activities } = await client.query(`
+      SELECT * 
+      FROM activities
+      JOIN activities_routines ON
+      activities_routines."activityId" = activities.id
+      WHERE activities_routines."routineId" IN (${routineActivities});
+    `,routineIds)
 
-    await Promise.all(activityRoutinePromise)
-
-    return await getActivityById(routineId)
+    for(let routine of routinesToReturn){
+      const addActivities = activities.filter(activity=>activity.routineId === routine.id)
+      routine.activities = addActivities
+    }    
+    return routinesToReturn;
   } catch (error){
     throw error;
   }
@@ -151,5 +163,5 @@ module.exports = {
   getActivityByName,
   attachActivitiesToRoutines,
   createActivity,
-  updateActivity,
+  updateActivity
 }
