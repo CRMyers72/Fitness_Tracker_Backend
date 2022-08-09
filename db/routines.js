@@ -1,6 +1,9 @@
 /* eslint-disable no-useless-catch */
 const client = require('./client');
-const { createActivity, attachActivitiesToRoutines } = require('./activities');
+const { 
+  // createActivity, 
+  attachActivitiesToRoutines
+ } = require('./activities');
 const { addActivityToRoutine } = require('./routine_activities');
 
 async function getRoutineById(id){
@@ -55,8 +58,8 @@ async function getRoutinesWithoutActivities(){
   }
 }
 
+
 async function getAllRoutines() {
-  console.log(attachActivitiesToRoutines)
   try{
     const { rows: routines } = await client.query(`
     SELECT *
@@ -179,7 +182,7 @@ async function updateRoutine({id, ...fields}) {
       return await getRoutineById(id)
     }
 
-    const activityList = await createActivity(activities)
+    // const activityList = await createActivity(activities)
     const activityListIdString = activityList.map(
       activity => `${ activity.id }`
     ).join(', ');

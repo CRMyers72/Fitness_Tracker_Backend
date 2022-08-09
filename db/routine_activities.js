@@ -1,5 +1,5 @@
 /* eslint-disable no-useless-catch */
-const { attachActivitiesToRoutines } = require('./activities');
+// const { attachActivitiesToRoutines } = require('./activities');
 const client = require('./client')
 
 async function getRoutineActivityById(id){

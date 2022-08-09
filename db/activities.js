@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-catch */
 const client = require("./client");
-const { createRoutine } = require("./routines");
+// const { createRoutine } = require("./routines");
 
 // database functions
 async function getAllActivities() {
@@ -134,7 +134,7 @@ async function updateActivity({ id, ...fields }) {
       return await getActivityById(id)
     }
 
-    const routineList = await createRoutine(routines)
+    // const routineList = await createRoutine(routines)
     const routineListIdString = routineList.map(
       routine => `${routine.id}`
     ).join(', ')
