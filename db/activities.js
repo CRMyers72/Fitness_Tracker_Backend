@@ -18,7 +18,6 @@ async function getAllActivities() {
     SELECT *
     FROM activities;
     `)
-    console.log(activities)
     return activities;
   } catch (error){
     throw error;
@@ -71,7 +70,7 @@ async function getActivityByName(name) {
 async function attachActivitiesToRoutines(routines) {
   const routinesToReturn = [...routines]
 
-  const routineActivities = routines.map((_, i)=>`${i+1}`).join(", ")
+  const routineActivities = routines.map((_, i)=>`$${i+1}`).join(", ")
   const routineIds = routines.map(routine=> routine.id)
   if(!routineIds?.length){
     return []

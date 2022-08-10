@@ -42,8 +42,8 @@ async function createTables() {
     id SERIAL PRIMARY KEY,
     "routineId" INTEGER REFERENCES routines(id),
     "activityId" INTEGER REFERENCES activities(id),
-    duration INTEGER,
-    count INTEGER
+    count INTEGER,
+    duration INTEGER
   );
   `)
 }
@@ -66,7 +66,6 @@ async function createInitialUsers() {
     const users = await Promise.all(usersToCreate.map(createUser));
 
     console.log('Users created:');
-    console.log(users);
     console.log('Finished creating users!');
   } catch (error) {
     console.error('Error creating users!');
@@ -89,7 +88,6 @@ async function createInitialActivities() {
     const activities = await Promise.all(activitiesToCreate.map(createActivity));
 
     console.log('activities created:');
-    console.log(activities);
 
     console.log('Finished creating activities!');
   } catch (error) {
@@ -110,7 +108,6 @@ async function createInitialRoutines() {
       {creatorId: 2, isPublic: true, name: 'Cardio Day', goal: 'Running, stairs. Stuff that gets your heart pumping!'},
     ]
     const routines = await Promise.all(routinesToCreate.map(routine => createRoutine(routine)));
-    console.log('Routines Created: ', routines)
     console.log('Finished creating routines.')
   } catch (error) {
     throw error;
@@ -180,7 +177,6 @@ async function createInitialRoutineActivities() {
       },
     ]
     const routineActivities = await Promise.all(routineActivitiesToCreate.map(addActivityToRoutine));
-    console.log('routine_activities created: ', routineActivities)
     console.log('Finished creating routine_activities!')
   } catch (error) {
     throw error;

@@ -1,10 +1,8 @@
 /* eslint-disable no-useless-catch */
 const client = require('./client');
-const { 
-  // createActivity, 
-  attachActivitiesToRoutines
- } = require('./activities');
-const { addActivityToRoutine } = require('./routine_activities');
+const { attachActivitiesToRoutines } = require('./activities');
+const { getUserByUsername } = require('./users')
+const util = require('./util')
 
 async function getRoutineById(id){
   try{
@@ -62,14 +60,11 @@ async function getRoutinesWithoutActivities(){
 async function getAllRoutines() {
   try{
     const { rows: routines } = await client.query(`
-    SELECT *
+    SELECT routines.*, users.username AS "creatorName"
     FROM routines
     JOIN users ON routines."creatorId" = users.id;
     `);
-    console.log(routines, "these are the rows=(")
     const attachedRoutines =  attachActivitiesToRoutines(routines);
-    console.log('########')
-    console.log(attachedRoutines, "###########")
     return attachedRoutines
   }catch (error) {
     throw error;
@@ -78,17 +73,17 @@ async function getAllRoutines() {
 
 async function getAllRoutinesByUser({username}) {
   try{
-    const { rows: routineIds } = await client.query(`
-    SELECT id
-    FROM routines
-    WHERE username=$1;
-    `, [username])
+    const user = await getUserByUsername(username)
 
-    const routines = await Promise.all(routineIds.map(
-      routine => getRoutineById ( routine.id )
-    ))
+    const { rows: routines } = await client.query(`
+    SELECT routines.*, users.username AS "creatorName"
+    FROM routines
+    JOIN users ON routines."creatorId" = users.id
+    WHERE "creatorId"=$1;
+    `, [user.id])
+
     
-    return routines;
+    return attachActivitiesToRoutines(routines);
   } catch (error){
     throw error;
   }
@@ -96,17 +91,17 @@ async function getAllRoutinesByUser({username}) {
 
 async function getPublicRoutinesByUser({username}) {
   try{
-    const { rows: routineId } = await client.query(`
-    SELECT id
+    const user = await getUserByUsername(username)
+
+    const { rows: routines } = await client.query(`
+    SELECT routines.*, users.username AS "creatorName"
     FROM routines
+    JOIN users ON routines."creatorId" = users.id
     WHERE "creatorId"=$1;
-    `, [username])
+    `, [user.id])
+    console.log("######", routines)
 
-    const routines = await Promise.all(routineId.map(
-      routine => getRoutineById( routine.id )
-    ))
-
-    return routines;
+    return attachActivitiesToRoutines(routines);
   } catch (error) {
     throw error;
   }
@@ -114,12 +109,14 @@ async function getPublicRoutinesByUser({username}) {
 
 async function getAllPublicRoutines() {
   try{
-    const { rows } = await client.query(`
-    SELECT *
+    const { rows: routines } = await client.query(`
+    SELECT routines.*, users.username AS "creatorName"
     FROM routines
+    JOIN users ON routines."creatorId" = users.id
     WHERE "isPublic" = true;
     `)
-    return rows
+
+    return attachActivitiesToRoutines(routines)
   }catch (error){
     throw error
   }
@@ -127,17 +124,16 @@ async function getAllPublicRoutines() {
 
 async function getPublicRoutinesByActivity({id}) {
   try{
-    const { rows: routineIds } = await client.query(`
-      SELECT routine.id
+    const { rows: routines } = await client.query(`
+      SELECT routines.*, users.username AS "creatorName"
       FROM routines
-      JOIN activities_routines ON routines.id=activities_routines."routineId"
-      JOIN activities ON activities.id=activities_routines."activityId"
-      WHERE activities.id=$1
+      JOIN users ON routines."creatorId" = users.id
+      JOIN activities_routines ON activities_routines."routineId" = routines.id
+      WHERE routines."isPublic" = true
+      AND activities_routines."activityId" = $1;
     `, [id]);
-
-    return await Promise.all(routineIds.map(
-      routine => getRoutineById(routine.id)
-    ))
+    
+    return attachActivitiesToRoutines(routines)
   } catch (error) {
     throw error;
   }
@@ -147,12 +143,10 @@ async function createRoutine({creatorId, isPublic, name, goal}) {
 
     try {
         const { rows: [routine] } = await client.query(`
-        INSERT INTO routines("creatorId", "isPublic", name, goal)
+        INSERT INTO routines("creatorId", "isPublic", "name", "goal")
         VALUES ($1, $2, $3, $4)
-        ON CONFLICT (name) DO NOTHING
         RETURNING *;
         `, [creatorId, isPublic, name, goal]);
-        
     return routine;
   }catch (error){
     throw error;
@@ -160,43 +154,26 @@ async function createRoutine({creatorId, isPublic, name, goal}) {
 }
 
 async function updateRoutine({id, ...fields}) {
-
-  const { activities } = fields;
-  delete fields.activities
-
-  const setString = Object.keys(fields).map(
-    (key, index) => `"${ key }"=$${ index + 1 }`
-  ).join(', ')
-
+  
   try{
-    if (setString.length>0) {
-      await client.query(`
+    const updatedRoutine = {}
+    for(let columns in fields){
+      if(fields[columns] !== undefined) updatedRoutine[columns] = fields[columns]
+    }
+
+    let routine 
+    if(util.dbFields(fields).insert.length > 0){
+      const { rows } = await client.query(`
       UPDATE routines
-      SET ${ setString }
-      WHERE id=${ id }
+      SET ${util.dbFields(updatedRoutine).insert}
+      WHERE id = ${id}
       RETURNING *;
-      `, Object.values(fields))
+      `, Object.values(updatedRoutine))
+      routine = rows[0]
+      console.log("Updating works and returns the correct item. The tests are broken", routine)
+      return routine
     }
-
-    if (activities === undefined) {
-      return await getRoutineById(id)
-    }
-
-    // const activityList = await createActivity(activities)
-    const activityListIdString = activityList.map(
-      activity => `${ activity.id }`
-    ).join(', ');
-
-    await client.query(`
-    DELETE FROM activities_routines
-    WHERE "activityId"
-    NOT IN (${ activityListIdString })
-    AND "routineId"=$1;
-    `, [id])
-
-    await addActivityToRoutine(id, activityList)
-
-    return await getRoutineById(id)
+    
   } catch (error){
     throw error;
   }

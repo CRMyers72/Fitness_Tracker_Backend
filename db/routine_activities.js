@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-catch */
 // const { attachActivitiesToRoutines } = require('./activities');
 const client = require('./client')
+const util = require('./util')
 
 async function getRoutineActivityById(id){
   try{
@@ -29,18 +30,18 @@ async function creatRoutineActivities(routineId, activityId, count, duration){
             VALUES ($1, $2, $3, $4)
             RETURNING *;
         `, [routineId, activityId, count, duration])
-        console.log(routineActivity)
         return routineActivity
-    } catch(error){
+      } catch(error){
         throw error
+      }
     }
-}
-
-async function addActivityToRoutine(routineActivity) {
-    const { routineId, activityId, count, duration } = routineActivity
-    try{
-    const createroutineActivitiesPromise = await creatRoutineActivities(routineId, activityId, count, duration) 
-    return createroutineActivitiesPromise
+    
+    async function addActivityToRoutine(routineActivity) {
+      const { routineId, activityId, count, duration } = routineActivity
+      try{
+        const createroutineActivitiesPromise = await creatRoutineActivities(routineId, activityId, count, duration) 
+        console.log("######", createroutineActivitiesPromise)
+        return createroutineActivitiesPromise
     }catch (error){
       throw error;
     }
@@ -64,29 +65,23 @@ async function getRoutineActivitiesByRoutine({id}) {
 
 async function updateRoutineActivity ({id, ...fields}) {
 
-  const { routineId, activityId } = fields
-  delete fields.routineId
-  delete fields.activityId
-
-  const setString = Object.keys(fields).map(
-    (key, index) => `"${ key }"=$${ index + 1 }`
-  ).join(', ')
-
   try{
-    if (setString.length > 0) {
-      await client.query(`
-        UPDATE activities_routines
-        SET ${ setString }
-        WHERE id=${ id }
-        RETURNING *;
-      `, Object.values(fields))
+    const updatedRoutineActivity = {}
+    for(let columns in fields){
+      if(fields[columns] !== undefined) updatedRoutineActivity[columns] = fields[columns]
     }
 
-    if (routineId === undefined && activityId === undefined) {
-      return await getRoutineActivityById(id)
+    let routineActivity
+    if(util.dbFields(fields).insert.length > 0){
+      const { rows } = await client.query(`
+      UPDATE activities_routines
+      SET ${util.dbFields(updatedRoutineActivity).insert}
+      WHERE id = ${id}
+      RETURNING *;
+      `, Object.values(updateRoutineActivity))
+      routineActivity = rows[0]
+      return routineActivity
     }
-
-    return await getRoutineActivityById(id)
   } catch (error) {
     throw error;
   }
@@ -95,9 +90,9 @@ async function updateRoutineActivity ({id, ...fields}) {
 async function destroyRoutineActivity(id) {
   try{
     await client.query(`
-    DELETE * FROM activites_routines
-    WHERE id=${id}
-    `)
+    DELETE FROM activities_routines
+    WHERE id=$1
+    `, [id])
   }catch (error) {
     throw error;
   }
