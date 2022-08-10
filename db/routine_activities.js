@@ -80,6 +80,7 @@ async function updateRoutineActivity ({id, ...fields}) {
       RETURNING *;
       `, Object.values(updateRoutineActivity))
       routineActivity = rows[0]
+      console.log("routineActiviteUpdates", routineActivity)
       return routineActivity
     }
   } catch (error) {
@@ -89,10 +90,13 @@ async function updateRoutineActivity ({id, ...fields}) {
 
 async function destroyRoutineActivity(id) {
   try{
-    await client.query(`
+    const {rows: [routineActivity] } = await client.query(`
     DELETE FROM activities_routines
     WHERE id=$1
+    RETURNING *;
     `, [id])
+
+    return routineActivity
   }catch (error) {
     throw error;
   }
