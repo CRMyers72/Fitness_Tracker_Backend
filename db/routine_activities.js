@@ -40,7 +40,6 @@ async function creatRoutineActivities(routineId, activityId, count, duration){
       const { routineId, activityId, count, duration } = routineActivity
       try{
         const createroutineActivitiesPromise = await creatRoutineActivities(routineId, activityId, count, duration) 
-        console.log("######", createroutineActivitiesPromise)
         return createroutineActivitiesPromise
     }catch (error){
       throw error;

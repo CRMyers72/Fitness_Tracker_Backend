@@ -5,15 +5,15 @@ const {
     createActivity,
     getAllActivities,
     getActivityById,
-    updateActivity,
-    getPublicRoutinesByActivity
+    getPublicRoutinesByActivity,
+    updateActivity
  } = require('../db/index');
 const { requireUser, requiredNotSent } = require('./utils');
 
  router.get('/', async (req, res, next)=>{
     try{
-        const routines = await getAllActivities()
-        res.send(routines)
+        const activities = await getAllActivities()
+        res.send(activities)
     }catch(error){
         next(error)
     }
@@ -43,8 +43,33 @@ const { requireUser, requiredNotSent } = require('./utils');
 
  router.patch('/:activityId', requireUser, requiredNotSent({requiredParams: ["name", "description"], atLeastOne: true}), async (req, res, next)=>{
     try{
-        console.log(req)
-        // const updatedActivity
+        const { id } = req.params.activityId
+        const fields = req.body
+        const updatedActivity = updateActivity({id, fields})
+        if(!updateActivity){
+            next({
+                name: "UpdateActivityError",
+                message: "That activity could not be updated"
+            })
+        }
+        res.send(updatedActivity, "Activity was updated")
+        
+    }catch(error){
+        next(error)
+    }
+ })
+
+ router.get('/:activitiesId/routines', async (req, res, next)=>{
+    try{
+        const { activityId } = req.params
+        const routines = await getPublicRoutinesByActivity({activityId})
+        if(!routines){
+            next({
+                name: "routinesError",
+                message: "No routines exist with that activity"
+            })
+        }
+        res.send(routines)
     }catch(error){
         next(error)
     }

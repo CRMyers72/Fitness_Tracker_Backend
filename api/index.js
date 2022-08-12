@@ -14,7 +14,13 @@ const { JWT_SECRET = 'neverTell'} = process.env;
 const userRouter = require('./users')
 router.use('/users', userRouter)
 
-const routineRouter = require('./activities') 
-router.use('/activities', routineRouter)
+const activityRouter = require('./activities') 
+router.use('/activities', activityRouter)
+
+const routineRouter = require('./routines')
+router.use('/routines', routineRouter)
+
+const routineActivityRouter = require('./routine_activities')
+router.use('/routine_activities', routineActivityRouter)
 
 module.exports = router
